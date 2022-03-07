@@ -1,4 +1,4 @@
-// 呼び出す毎に1つPromiseオブジェクトを返す関数
+// 呼び出す毎に1つPromiseを返す関数を返す関数
 function* promiseFunctionArrayIterator (
   promiseFunctionArray: (() => Promise<any>)[]
 ): Generator<
