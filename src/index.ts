@@ -16,23 +16,29 @@ function* promiseFunctionArrayIterator (
 
 let pa = [];
 for(let i = 0; i < 100; i++) {
-    pa.push(() => new Promise(resolve => setTimeout(resolve, i*200)));
+    pa.push(() => new Promise(resolve => setTimeout(() => resolve(''), i*200)));
 }
 
 let iter = promiseFunctionArrayIterator(pa);
 
-function doPromiseFunction() {
+function doPromiseFunction(char) {
     let iterObj = iter.next();
     if (iterObj.done) {
       return Promise.resolve();
     } else {
-      iterObj.value();
+      console.log(char);
+      return iterObj.value();
     }
 }
 
 (
   async () => {
     let arr = [Promise.resolve('a'), Promise.resolve('b'), Promise.resolve('c')];
-    
+
+    for (let i = 0; i < pa.length; i++) {
+      for (let v of arr) {
+        v.then(doPromiseFunction)
+      }
+    }
   }
 )();
