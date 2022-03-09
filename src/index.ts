@@ -19,7 +19,7 @@ for(let i = 0; i < 100; i++) {
   pa.push(
     () => new Promise(
       resolve => {
-        return setTimeout(resolve, 500, i)
+        return setTimeout(resolve, 300, i)
       }
     )
   );
@@ -27,25 +27,28 @@ for(let i = 0; i < 100; i++) {
 
 let iter = promiseFunctionArrayIterator(pa);
 
-function doPromiseFunction(char) {
+let resultArray = [];
+
+function doPromiseFunction(result) {
+    result ? resultArray.push(result) : null;
     let iterObj = iter.next();
     if (iterObj.done) {
       return Promise.resolve();
     } else {
-      console.log(char);
       return iterObj.value();
     }
 }
 
 (
   async () => {
-    let arr = [Promise.resolve('a'), Promise.resolve('b'), Promise.resolve('c')];
+    let arr = [Promise.resolve(), Promise.resolve(), Promise.resolve()];
 
-    for (let v of arr) {
+    for (let j=0; j < arr.length; j++) {
       for (let i = 0; i < pa.length; i++) {
-        v = v.then(doPromiseFunction)
+        arr[j] = arr[j].then(doPromiseFunction)
       }
     }
     await Promise.all(arr);
+    console.log(resultArray);
   }
 )();
