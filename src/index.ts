@@ -16,7 +16,13 @@ function* promiseFunctionArrayIterator (
 
 let pa = [];
 for(let i = 0; i < 100; i++) {
-    pa.push(() => new Promise(resolve => setTimeout(() => resolve(''), i*200)));
+  pa.push(
+    () => new Promise(
+      resolve => {
+        return setTimeout(resolve, 500, i)
+      }
+    )
+  );
 }
 
 let iter = promiseFunctionArrayIterator(pa);
@@ -35,10 +41,11 @@ function doPromiseFunction(char) {
   async () => {
     let arr = [Promise.resolve('a'), Promise.resolve('b'), Promise.resolve('c')];
 
-    for (let i = 0; i < pa.length; i++) {
-      for (let v of arr) {
-        v.then(doPromiseFunction)
+    for (let v of arr) {
+      for (let i = 0; i < pa.length; i++) {
+        v = v.then(doPromiseFunction)
       }
     }
+    await Promise.all(arr);
   }
 )();
