@@ -1,54 +1,89 @@
-// 呼び出す毎に1つPromiseを返す関数を返す関数
-function* promiseFunctionArrayIterator (
-  promiseFunctionArray: (() => Promise<any>)[]
-): Generator<
-  () => Promise<any>,
-  () => Promise<any>,
+type promiseFunction = () => Promise<any>;
+type promiseFunctionGenerator = Generator<
+  promiseFunction,
+  promiseFunction,
   void
-> {
-  let tmp = [...promiseFunctionArray];
-  while (0 < tmp.length) {
-    yield tmp.shift();
+>;
+
+class ParallelPromises {
+  private functionsNumber: number;
+  private functionsIterator: promiseFunctionGenerator;
+  private parallelsNumber: number;
+  private results: any[];
+
+  constructor (
+    functionsArray: promiseFunction[]
+  ) {
+    this.functionsNumber = functionsArray.length;
+    this.functionsIterator = this.promiseFunctionArrayIterator([...functionsArray]);
+    this.results = [];
+
+    return this;
   }
-  return () => Promise.resolve();
-}
 
+  /**
+   * 並列数を設定する用の関数
+   *
+   * @param num 並列数
+   * @returns 
+   */
+  setParallelsNumber(num: number): this {
+    this.parallelsNumber = num;
+    return this;
+  }  
 
-let pa = [];
-for(let i = 0; i < 100; i++) {
-  pa.push(
-    () => new Promise(
-      resolve => {
-        return setTimeout(resolve, 300, i)
-      }
-    )
-  );
-}
+  /**
+   * 呼び出しごとに1つ関数を戻すジェネレータ
+   *
+   * @param functionsArray 関数列
+   * @returns {promiseFunction}
+   */
+  private *promiseFunctionArrayIterator (
+    functionsArray: promiseFunction[]
+  ): promiseFunctionGenerator {
+    let tmp: promiseFunction[] = [...functionsArray];
+    while (0 < tmp.length) {
+      yield tmp.shift();
+    }
+    return () => Promise.resolve();
+  }
 
-let iter = promiseFunctionArrayIterator(pa);
-
-let resultArray = [];
-
-function doPromiseFunction(result) {
-    result ? resultArray.push(result) : null;
-    let iterObj = iter.next();
+  /**
+   * 関数列から一つ関数を読み出し、実行する
+   *
+   * @param result 前のPromiseの結果
+   * @returns {Promise<any>}
+   */
+  doFunction(result: any): Promise<any> {
+    result ? this.results.push(result) : null;
+    const iterObj: IteratorResult<promiseFunction, promiseFunction> = this.functionsIterator.next();
     if (iterObj.done) {
       return Promise.resolve();
     } else {
       return iterObj.value();
     }
-}
+  }
 
-(
-  async () => {
-    let arr = [Promise.resolve(), Promise.resolve(), Promise.resolve()];
+  /**
+   * 並列処理を実行する
+   *
+   * @returns {Promise<any[]>}
+   */
+  async run(): Promise<any[]> {
+    let parallel: Promise<any>[] = [];
+    for (let i=0; i<this.parallelsNumber; i++) {
+      parallel.push(Promise.resolve());
+    }
 
-    for (let j=0; j < arr.length; j++) {
-      for (let i = 0; i < pa.length; i++) {
-        arr[j] = arr[j].then(doPromiseFunction)
+    for (let i=0; i<this.functionsNumber; i++) {
+      for (let j=0; j<parallel.length; j++) {
+        parallel[j] = parallel[j].then(this.doFunction.bind(this));
       }
     }
-    await Promise.all(arr);
-    console.log(resultArray);
+
+    await Promise.all(parallel);
+    return this.results;
   }
-)();
+}
+
+module.exports = ParallelPromises;
